@@ -28,6 +28,6 @@ spec:
     spec:
       containers:
       - name: app
-        image: ghcr.io/YOUR_USERNAME/gitops-demo:v1
+        image: ghcr.io/atharvasss/gitops-demo:latest
         ports:
         - containerPort: 80
