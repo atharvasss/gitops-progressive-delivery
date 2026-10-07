@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: gitops-demo
+  namespace: gitops-demo
+spec:
+  replicas: 4
+
+  strategy:
+    canary:
+      steps:
+      - setWeight: 25
+      - pause:
+          duration: 30
+      - setWeight: 50
+      - pause:
+          duration: 30
+      - setWeight: 100
+
+  selector:
+    matchLabels:
+      app: gitops-demo
+
+  template:
+    metadata:
+      labels:
+        app: gitops-demo
+    spec:
+      containers:
+      - name: app
+        image: ghcr.io/YOUR_USERNAME/gitops-demo:v1
+        ports:
+        - containerPort: 80
