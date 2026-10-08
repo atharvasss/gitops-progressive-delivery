@@ -77,7 +77,7 @@ A bad release is introduced to demonstrate how the progressive delivery workflow
 **Progressive rollout demonstrating release validation and failure handling.**  
 The rollout can be monitored and controlled during deployment, allowing an unhealthy release to be stopped before it fully replaces the healthy version.
 
-### 7. Rollback & Recovery
+### 7. Rollback completed — stable revision restored and rollout healthy
 
 The failed release is aborted or rolled back to restore the previously working application version.
 
