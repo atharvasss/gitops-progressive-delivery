@@ -1,108 +1,88 @@
-# GitOps-Based Kubernetes Deployment & Progressive Delivery Platform
+# GitOps Progressive Delivery Platform
 
-GitOps CI/CD platform using GitHub Actions, Docker, Trivy, Helm, Argo CD and Kubernetes.
+A GitHub-based Kubernetes deployment platform with a secure CI pipeline, GitOps-driven continuous delivery, and canary progressive delivery.
+
+**Stack:** GitHub Actions · Trivy · GHCR · Argo CD · Argo Rollouts · Kubernetes
+
+---
 
 ## Architecture
 
-GitHub → GitHub Actions → Docker → Trivy → GHCR → Argo CD → Kubernetes → Progressive Delivery
+```
+Developer Push → GitHub Actions (Build → Test → Trivy Scan → Push to GHCR)
+              → Git manifests updated → Argo CD syncs cluster
+              → Argo Rollouts performs canary release
+```
 
-## Features
+---
 
-- GitOps deployment
-- Automated CI/CD
-- Docker image builds
-- Trivy security scanning
-- GHCR image registry
-- Argo CD synchronization
-- Self-healing
-- Canary deployments
-- Rollback
-- Kubernetes
+## 1. Container Security Scan (Trivy)
 
-## GitOps Flow
+Every image is scanned for `HIGH` and `CRITICAL` vulnerabilities before it is pushed to the registry.
 
-### 1. Application Build & CI/CD Pipeline
+```bash
+trivy image --severity HIGH,CRITICAL gitops-demo:v1
+```
 
-Developer pushes code and GitHub Actions automatically builds the application container image.
+![Trivy vulnerability scan](docs/screenshots/1.png)
 
-![GitHub Actions CI/CD](docs/screenshots/1.png)
+---
 
-**GitHub Actions pipeline showing the automated build and delivery workflow.**  
-This demonstrates the CI/CD stage where application changes are processed before being deployed to the Kubernetes environment.
+## 2. CI Pipeline (GitHub Actions)
 
-### 2. Container Security Scanning
+The `Build-Test-Scan-Push` workflow runs on every push to `master`: checkout, build image, Trivy scan, login to GHCR, and push image.
 
-The container image is scanned for known vulnerabilities before being promoted for deployment.
+![GitHub Actions CI pipeline](docs/screenshots/2.png)
 
-![Trivy Security Scan](docs/screenshots/2.png)
+---
 
-**Trivy security scan validating the container image before deployment.**  
-This adds a security gate to the delivery pipeline and helps identify known image vulnerabilities before the release reaches Kubernetes.
+## 3. GitOps Deployment (Argo CD)
 
-### 3. Container Image Published to GHCR
+Argo CD watches the Git repository and keeps the cluster in sync. The application shows **Healthy** and **Synced** with auto-sync enabled.
 
-After the build and security checks, the container image is published to GitHub Container Registry.
+![Argo CD application synced and healthy](docs/screenshots/3.png)
 
-![GHCR Container Image](docs/screenshots/3.png)
+---
 
-**Container image available in GitHub Container Registry (GHCR).**  
-GHCR acts as the image registry from which the Kubernetes deployment can retrieve the application image.
+## 4. Self-Healing Demo
 
-### 4. Argo CD GitOps Synchronization
+The deployment is manually scaled down to 1 replica. Argo CD detects the drift from Git and restores it to the desired 3 replicas automatically.
 
-Argo CD continuously compares the desired state stored in Git with the actual state running in Kubernetes.
+```bash
+kubectl scale deployment gitops-demo -n gitops-demo --replicas=1
+kubectl get deployment -n gitops-demo -w
+```
 
-![Argo CD](docs/screenshots/4.png)
+![Self-healing: replicas restored to 3/3](docs/screenshots/4.png)
 
-**Argo CD showing the GitOps application and Kubernetes synchronization state.**  
-This demonstrates how the Git repository becomes the source of truth for the Kubernetes deployment.
+---
 
-### 5. Kubernetes Deployment
+## 5. Canary Progressive Delivery (Argo Rollouts)
 
-The desired application state is synchronized and deployed into the Kubernetes cluster.
+The application is deployed as an Argo Rollout using a canary strategy. A new revision is promoted step by step until it reaches 100% traffic, and the old ReplicaSet is scaled down.
 
-![Kubernetes Deployment](docs/screenshots/5.png)
+![Argo Rollouts canary completed](docs/screenshots/5.png)
 
-**Kubernetes workload running after GitOps deployment.**  
-This confirms that the application defined through the GitOps workflow has been deployed successfully into the cluster.
+---
 
-## Failure Scenarios
+## 6. Rollout Status and Revision History
 
-### 6. Progressive Delivery & Rollout Failure
+Rollout status is verified with the Argo Rollouts kubectl plugin. The revision history shows the stable ReplicaSet and the previous revisions scaled down, which are available for rollback.
 
-A bad release is introduced to demonstrate how the progressive delivery workflow handles an unhealthy deployment.
+```bash
+kubectl argo rollouts status gitops-demo -n gitops-demo
+kubectl argo rollouts get rollout gitops-demo -n gitops-demo
+```
 
-![Progressive Rollout](docs/screenshots/6.png)
+![Rollout status and revision history](docs/screenshots/6.png)
 
-**Progressive rollout demonstrating release validation and failure handling.**  
-The rollout can be monitored and controlled during deployment, allowing an unhealthy release to be stopped before it fully replaces the healthy version.
+---
 
-### 7. Rollback completed — stable revision restored and rollout healthy
+## Key Features
 
-The failed release is aborted or rolled back to restore the previously working application version.
-
-![Rollback and Recovery](docs/screenshots/7.png)
-
-**Rollback restoring the application to a known-good version.**  
-This demonstrates the recovery path of the deployment workflow and validates that a failed release can be safely reverted.
-
-## GitOps Flow
-
-1. Developer pushes code
-2. GitHub Actions builds image
-3. Trivy scans image
-4. Image pushed to GHCR
-5. Argo CD detects desired state
-6. Kubernetes deployment occurs
-7. Progressive rollout validates release
-
-## Failure Scenarios
-
-- Manual replica modification
-- Bad release
-- Rollout abort
-- Rollback
-
-## Technologies
-
-Kubernetes, Argo CD, Argo Rollouts, Docker, Helm, GitHub Actions, Trivy
+- Automated build, scan, and push pipeline with GitHub Actions
+- Vulnerability scanning with Trivy (HIGH and CRITICAL)
+- Images published to GitHub Container Registry (GHCR)
+- GitOps continuous delivery with Argo CD (auto-sync, self-heal)
+- Canary releases with Argo Rollouts
+- Revision history for fast rollback
